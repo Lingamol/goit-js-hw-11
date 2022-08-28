@@ -1,19 +1,17 @@
 import './css/styles.css';
 import Notiflix from 'notiflix';
 import 'notiflix/dist/notiflix-3.2.5.min.css';
-// import { fetchData } from './fetchData';
+
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
 import { galleryItemsMarkup } from './galleryItemsMarkup';
-import { axiosGet } from './axiosData';
+
 import axios from 'axios';
 const DEFAULT_CURRENT_PAGE = 1;
 
-let items = [];
 let query = '';
 let currentPage = 1;
 let totalPages = 0;
-let totalHits = 0;
 
 const refs = {
   inputForSearch: document.querySelector('input[name="searchQuery"]'),
@@ -41,7 +39,7 @@ function onSubmit(event) {
   event.preventDefault();
   clearGallery();
 
-  currentPage = 1;
+  currentPage = DEFAULT_CURRENT_PAGE;
   const {
     elements: { searchQuery },
   } = event.currentTarget;
