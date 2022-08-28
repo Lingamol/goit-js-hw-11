@@ -1,52 +1,105 @@
 import './css/styles.css';
-import debounce from 'lodash.debounce';
 import Notiflix from 'notiflix';
 import 'notiflix/dist/notiflix-3.2.5.min.css';
-import { fetchCountries } from './fetchCountries';
-import { markupCountrys, markupCountryInfo } from './markup';
-const DEBOUNCE_DELAY = 300;
+// import { fetchData } from './fetchData';
+import SimpleLightbox from 'simplelightbox';
+import 'simplelightbox/dist/simple-lightbox.min.css';
+import { galleryItemsMarkup } from './galleryItemsMarkup';
+import { axiosGet } from './axiosData';
+import axios from 'axios';
+const DEFAULT_CURRENT_PAGE = 1;
+
+let items = [];
+let query = '';
+let currentPage = 1;
+let totalPages = 0;
+let totalHits = 0;
 
 const refs = {
-  inputForSearch: document.querySelector('#search-box'),
-  countryList: document.querySelector('ul.country-list'),
-  countryInfo: document.querySelector('div.country-info'),
+  inputForSearch: document.querySelector('input[name="searchQuery"]'),
+  form: document.querySelector('#search-form'),
+  gallery: document.querySelector('div.gallery'),
+  btnLoadMore: document.querySelector('.load-more'),
+};
+var lightbox = new SimpleLightbox('.gallery a', {
+  scrollZoom: false,
+  captionsData: 'alt',
+  captionDelay: 250,
+});
+refs.btnLoadMore.style.display = 'none';
+const renderGallery = items => {
+  refs.gallery.insertAdjacentHTML('beforeend', items);
+
+  lightbox.refresh();
 };
 
-refs.inputForSearch.addEventListener(
-  'input',
-  debounce(handelInput, DEBOUNCE_DELAY)
-);
+refs.form.addEventListener('submit', onSubmit);
+refs.btnLoadMore.addEventListener('click', handleLoadMoreClick);
 
-function handelInput(e) {
-  refs.countryList.innerHTML = '';
-  refs.countryInfo.innerHTML = '';
+function onSubmit(event) {
+  event.preventDefault();
+  clearGallery();
+  if (refs.btnLoadMore.disabled === true) {
+    refs.btnLoadMore.removeAttribute('disabled', true);
+  }
+  currentPage = 1;
+  const {
+    elements: { searchQuery },
+  } = event.currentTarget;
+  query = searchQuery.value.trim();
+  if (!query) {
+    Notiflix.Notify.failure('Please fill field!');
+    return;
+  }
+  fetchData(query);
+}
 
-  console.log(e.target.value.trim());
-  if (e.target.value.trim() !== '') {
-    fetchCountries(e.target.value.trim())
-      .then(data => {
-        if (data.length > 10) {
-          Notiflix.Notify.info(
-            'Too many matches found. Please enter a more specific name.'
-          );
-        } else if (data.length > 1 && data.length <= 10) {
-          refs.countryList.insertAdjacentHTML(
-            'beforeend',
-            markupCountrys(data)
-          );
-        } else {
-          refs.countryInfo.insertAdjacentHTML(
-            'beforeend',
-            markupCountryInfo(data[0])
-          );
-        }
-      })
-      .catch(error => {
-        if (Number(error.message) === 404) {
-          Notiflix.Notify.failure('Oops, there is no country with that name');
-        } else {
-          console.log('error:', error.message);
-        }
-      });
+const fetchData = async q => {
+  const params = {
+    key: '29487870-d36fe710dee1f0536a07f7119',
+    image_type: 'photo',
+    orientation: 'horizontal',
+    safesearch: true,
+    per_page: 100,
+  };
+
+  const url = `https://pixabay.com/api/?q=${q}&page=${currentPage}`;
+
+  try {
+    const { data } = await axios.get(url, { params });
+    if (data.totalHits === 0) {
+      Notiflix.Notify.warning(
+        'Sorry, there are no images matching your search query. Please try again.'
+      );
+      return;
+    } else if (currentPage === 1) {
+      Notiflix.Notify.success(`Hooray! We found ${data.totalHits} images.`);
+    }
+    totalPages = data.totalHits / params.per_page;
+
+    renderGallery(galleryItemsMarkup(data.hits));
+    toggleLoadMoreBtn(data.totalHits);
+  } catch (error) {
+    if (error.response) {
+      console.log(error.response.data);
+    } else if (error.request) {
+      console.log(error.request);
+    } else {
+      console.log('Error', error.message);
+    }
+  }
+};
+function handleLoadMoreClick() {
+  currentPage += 1;
+  fetchData(query);
+}
+function clearGallery() {
+  refs.gallery.innerHTML = '';
+}
+function toggleLoadMoreBtn(hitsValue) {
+  if (hitsValue === 0 || currentPage === totalPages) {
+    refs.btnLoadMore.style.display = 'none';
+  } else {
+    refs.btnLoadMore.style.display = 'block';
   }
 }
