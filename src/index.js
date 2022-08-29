@@ -68,6 +68,7 @@ const fetchData = async q => {
       Notiflix.Notify.warning(
         'Sorry, there are no images matching your search query. Please try again.'
       );
+      toggleLoadMoreBtn(data.totalHits);
       return;
     } else if (currentPage === 1) {
       Notiflix.Notify.success(`Hooray! We found ${data.totalHits} images.`);
